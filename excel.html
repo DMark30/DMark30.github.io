@@ -1,0 +1,72 @@
+<head>
+    <script lang="javascript" src="js/xlsx.full.min.js"></script>
+    <script type="text/javascript">
+    function exportExcel(){
+        doit('xlsx');
+    }
+    function doit(type, fn, dl) {
+        computeXLSTable();
+        var elt = document.getElementById('tempTable');
+        var wb = XLSX.utils.table_to_book(elt, {sheet:"Sheet JS"});
+        sheet = wb.Sheets[wb.SheetNames[0]];
+        for (var i=1; i<6; i++) {
+            for (var j=1; j<6; j++) {
+                var letter = String.fromCharCode("A".charCodeAt(0)+j-1);
+                var value = localStorage[letter+i] || "";
+                if (value.charAt(0) == "=") {
+                    var cell = {f: value.substring(1)};
+                    sheet[letter+i] = cell;
+                }   
+            }
+        } 
+        return dl ?
+            XLSX.write(wb, {bookType:type, bookSST:true, type: 'base64'}) :
+            XLSX.writeFile(wb, fn || ('SheetJSTableExport.' + (type || 'xlsx')));
+    }
+    function computeXLSTable(){
+        document.getElementById("tempTable").innerHTML = "";
+        for (var i=1; i<6; i++) {
+            var rowTemp = document.getElementById("tempTable").insertRow(-1);    
+            for (var j=1; j<6; j++) {
+                var letter = String.fromCharCode("A".charCodeAt(0)+j-1);
+                rowTemp.innerHTML = rowTemp.innerHTML + "<td id='temp"+ letter+i +"'>" + localStorage[letter+i] + "</td>";    
+            }
+        }
+    } 
+    </script>
+    </head>
+<input value="Выгрузить в Excel" onclick="exportExcel()" type="button">
+<table id="excelTable"></table>
+<footer><p>Тестируем Excel на JS и выгрузку в xlsx</p></footer>
+<table id="tempTable" style="visibility:hidden"></table>
+<script type="text/javascript">
+table = document.getElementById("excelTable");
+for (var i=0; i<6; i++) {
+    var row = document.getElementById("excelTable").insertRow(-1);
+    for (var j=0; j<6; j++) {
+        var letter = String.fromCharCode("A".charCodeAt(0)+j-1);
+        row.insertCell(-1).innerHTML = i&&j ? "<input class='excelInput' id='"+ letter+i +"'/>" : i||letter;
+    }
+}
+var DATA={}, INPUTS=[].slice.call(document.querySelectorAll(".excelInput"));
+INPUTS.forEach(function(elm) {
+    elm.onfocus = function(e) {
+        e.target.value = localStorage[e.target.id] || "";
+    };
+    elm.onblur = function(e) {
+        localStorage[e.target.id] = e.target.value;
+        computeAll();
+    };
+    var getter = function() {
+        var value = localStorage[elm.id] || "";
+        if (value.charAt(0) == "=") {
+            with (DATA) return eval(value.substring(1));
+        } else { return isNaN(parseFloat(value)) ? value : parseFloat(value); }
+    };
+    Object.defineProperty(DATA, elm.id, {get:getter});
+    Object.defineProperty(DATA, elm.id.toLowerCase(), {get:getter});
+});
+(window.computeAll = function() {
+    INPUTS.forEach(function(elm) { try { elm.value = DATA[elm.id]; } catch(e) {} });
+})();
+</script>
